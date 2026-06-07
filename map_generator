@@ -1,0 +1,61 @@
+import io
+import re
+import logging
+import httpx
+from PIL import Image, ImageDraw, ImageFont
+
+logger = logging.getLogger(__name__)
+
+MAP_URL = "https://raw.githubusercontent.com/nicholasgasior/gta-v-map/master/gtav_map_2048.jpg"
+MAP_URL_FALLBACK = "https://www.gtabase.com/images/grand-theft-auto-v/maps/gta-v-world-map.jpg"
+
+_cached_map = None
+
+async def _get_base_map():
+    global _cached_map
+    if _cached_map is not None:
+        return _cached_map.copy()
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; GunVanBot/1.0)"}
+    for url in [MAP_URL, MAP_URL_FALLBACK]:
+        try:
+            async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+                r = await client.get(url, headers=headers)
+                r.raise_for_status()
+            img = Image.open(io.BytesIO(r.content)).convert("RGB")
+            img = img.resize((2048, 2048), Image.LANCZOS)
+            _cached_map = img
+            return _cached_map.copy()
+        except Exception as e:
+            logger.warning(f"Map download failed ({url}): {e}")
+    raise RuntimeError("Could not download GTA map.")
+
+LOCATIONS = {
+    "palmer-taylor power station": (1390, 1010),
+    "hookies": (340, 270),
+    "north chumash": (340, 270),
+    "land act reservoir": (1480, 750),
+    "thomson scrapyard": (1310, 1260),
+    "hearty taco": (1460, 1080),
+    "mirror park": (1460, 1080),
+    "terminal": (1290, 1480),
+    "vinewood sign": (1060, 790),
+    "no marks cleaners": (430, 110),
+    "paleto bay": (430, 110),
+    "popular street": (1390, 1200),
+    "la mesa": (1390, 1200),
+    "paleto forest lumber yard": (530, 180),
+    "paleto forest": (530, 180),
+    "merle abrahams": (1240, 430),
+    "sandy shores": (1240, 430),
+    "magellan avenue": (1000, 1380),
+    "vespucci beach": (1000, 1380),
+    "car scrapyard": (1530, 1200),
+    "el burro heights": (1530, 1200),
+    "murrieta heights": (1440, 1160),
+    "walker ocean store": (1290, 1440),
+    "port of los santos": (1290, 1440),
+    "caesars auto parking": (1090, 1310),
+    "little seoul": (1090, 1310),
+    "grand senora desert": (1340, 680),
+    "procopio beach": (920, 185),
+    "fridgit": (1390
